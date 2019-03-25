@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 import sys
-import pdb
 import re # For regex
 
 import ryu_ofctl
@@ -22,8 +21,6 @@ def main(macHostA, macHostB):
 
 # Installs end-to-end bi-directional flows in all switches
 def installPathFlows(macHostA, macHostB, pathA2B):
-    ##### YOUR CODE HERE #####
-    pdb.set_trace()
     for each in pathA2B:
         dpid = str(each['dpid']).zfill(16)
         port1 = each['in_port']
@@ -80,6 +77,7 @@ def dijkstras(macHostA, macHostB):
     leastDistNeighbour = {} # Key = node, value = neighbour node with least distance from A
     pathAtoB = [] # Holds path information
     
+    #setup data
     prev = {}
     dpidlist = ryu_ofctl.listSwitches()['dpids']
     inA = ryu_ofctl.getMacIngressPort(macHostA)
@@ -92,6 +90,7 @@ def dijkstras(macHostA, macHostB):
     switchB = int(inB['dpid'])   
 
     outlist = []
+    #handle the case where start and endpoints are on the same switch
     if(switchA == switchB):
         d = {}
         d['dpid'] = switchA  
@@ -100,24 +99,28 @@ def dijkstras(macHostA, macHostB):
         pathAtoB.append(d)
         return pathAtoB
    
+    #create a distance list and set all values to infinity except the start switch
     for each in dpidlist:
         distanceFromA[each] = INFINITY
         leastDistNeighbour[each] = None
         if each==str(switchA).zfill(16):
             distanceFromA[each] = 0
-    #pdb.set_trace()
     s = []
     while len(distanceFromA) > 0:
         minval = INFINITY
         dpid_sel = -1
+        #find the node with the lowest distance and select it
         for each in dpidlist:
             if distanceFromA[each] <minval:
                 minval = distanceFromA[each]
                 dpid_sel = each
-        #pdb.set_trace()
+        #somehow the list was empty
         if dpid_sel == -1:
             break
+        #remove the selected node from the list
         dpidlist.remove(dpid_sel)
+
+        #optimization. because we know the end point we can stop as soon as we hit it and create the path array
         if dpid_sel == str(switchB).zfill(16):
             s = []
             if leastDistNeighbour[dpid_sel] is not None or dpid_sel==switchA:
@@ -134,6 +137,8 @@ def dijkstras(macHostA, macHostB):
             else:
                 #they are on the same node i.e h1 and h2
                 print "lol"
+
+        #find neighbours of the selected node and then calculate the distances from each
         neighbours = findNeighbours(int(dpid_sel))
         LENGTH = 1
         for each in neighbours:
@@ -147,31 +152,25 @@ def dijkstras(macHostA, macHostB):
                 distanceFromA[e1dpid] = alt
                 d = [e1port, e2port, dpid_sel]
                 leastDistNeighbour[e1dpid] = d
+
+    #this part formats the output in a coherent way
     d = {}
     s.reverse()
     outlist.reverse()
-    pdb.set_trace()
+    #somehow the list was empty or the first item was not actually the start node
     if not s or int(s[0])!= switchA:
         print "FAILLL"
         return pathAtoB
 
+    #format the data using nodeDict
     linport = portA
     for each in outlist:
-        d = {}
-        d['in_port'] = linport
-        d['out_port'] = each[1]
-        d['dpid'] = int(each[2])
+        d = nodeDict(int(each[2]), linport, each[1])
         linport = each[0]
         pathAtoB.append(d)
-    d = {}
-    d['dpid'] = int(switchB)
-    d['in_port'] =linport
-    d['out_port'] = portB
+    #insert the last node
+    d = nodeDict(int(switchB),linport, portB)
     pathAtoB.append(d)
-    # Some debugging output
-    print "leastDistNeighbour = %s" % leastDistNeighbour
-    print "distanceFromA = %s" % distanceFromA
-    print "pathAtoB = %s" % pathAtoB
 
     return pathAtoB
 
