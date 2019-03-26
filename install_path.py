@@ -21,16 +21,21 @@ def main(macHostA, macHostB):
 
 # Installs end-to-end bi-directional flows in all switches
 def installPathFlows(macHostA, macHostB, pathA2B):
+    #need to make 2 connections in opposite directions
+    #for each dictionarly in the pathA2B list
     for each in pathA2B:
-        dpid = str(each['dpid']).zfill(16)
+        dpid = str(each['dpid']).zfill(16) #make sure the dpid is in the right format
         port1 = each['in_port']
         port2 = each['out_port']
+        #create 2 output actions with each of the ports
         act1 = ryu_ofctl.OutputAction(port1)
         act2= ryu_ofctl.OutputAction(port2)
+        #create flow1 with dest B, inport=port1, action=port2
         flow1 = ryu_ofctl.FlowEntry()
         flow1.dl_dst = macHostB
         flow1.in_port = port1
         flow1.addAction(act2)
+        #create flow2 with destA, inport=port2, action=port1
         flow2 = ryu_ofctl.FlowEntry()
         flow2.dl_dst = macHostA
         flow2.in_port = port2
@@ -48,7 +53,8 @@ def findNeighbours(dpid):
     switchlinks = ryu_ofctl.listSwitchLinks(str(dpid).zfill(16))['links']
     for each in switchlinks:
         end1 = each['endpoint1']
-        end2 = each['endpoint2']    
+        end2 = each['endpoint2']
+        #ensure that only entries with dpids that are different get added and no duplicates    
         if int(end1['dpid'])!=dpid:
             neighbours.append(each)
 
@@ -90,7 +96,7 @@ def dijkstras(macHostA, macHostB):
     switchB = int(inB['dpid'])   
 
     outlist = []
-    #handle the case where start and endpoints are on the same switch
+    #handle the case where start and endpoints are on the same switch i.e. h1 and h2
     if(switchA == switchB):
         d = {}
         d['dpid'] = switchA  
@@ -114,7 +120,7 @@ def dijkstras(macHostA, macHostB):
             if distanceFromA[each] <minval:
                 minval = distanceFromA[each]
                 dpid_sel = each
-        #somehow the list was empty
+        #somehow the list was empty so return an empty path
         if dpid_sel == -1:
             break
         #remove the selected node from the list
@@ -134,9 +140,6 @@ def dijkstras(macHostA, macHostB):
                     tmp = out[2]
                     s.append(tmp)
                 break
-            else:
-                #they are on the same node i.e h1 and h2
-                print "lol"
 
         #find neighbours of the selected node and then calculate the distances from each
         neighbours = findNeighbours(int(dpid_sel))
@@ -157,7 +160,7 @@ def dijkstras(macHostA, macHostB):
     d = {}
     s.reverse()
     outlist.reverse()
-    #somehow the list was empty or the first item was not actually the start node
+    #somehow the list was empty or the first item was not actually the start node, return empty path
     if not s or int(s[0])!= switchA:
         print "FAILLL"
         return pathAtoB
