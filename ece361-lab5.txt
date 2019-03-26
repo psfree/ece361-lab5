@@ -1,0 +1,56 @@
+#Liam Burns, 998800294
+#Max Stepanov, 
+
+1. No the pings are unsuccessful.
+
+2.
+ubuntu@ece361:~$ sudo ovs-ofctl dump-flows s1
+NXST_FLOW reply (xid=0x4):
+
+3.
+
+ubuntu@ece361:~$ sudo ovs-ofctl dump-flows s1
+NXST_FLOW reply (xid=0x4):
+ cookie=0x0, duration=9.59s, table=0, n_packets=0, n_bytes=0, in_port=1 actions=output:2
+ cookie=0x0, duration=4.32s, table=0, n_packets=0, n_bytes=0, in_port=2 actions=output:1
+
+This time there are connections between the two hosts.
+It appears to show the time the connections have been up, the number of packets/bytes sent, which table the flows are in
+and the port connections.
+
+4. The pings now work because a connection between the hosts exists.
+
+mininet> h1 ping -c 4 h2
+PING 10.0.0.2 (10.0.0.2) 56(84) bytes of data.
+64 bytes from 10.0.0.2: icmp_req=1 ttl=64 time=0.126 ms
+64 bytes from 10.0.0.2: icmp_req=2 ttl=64 time=0.033 ms
+64 bytes from 10.0.0.2: icmp_req=3 ttl=64 time=0.035 ms
+64 bytes from 10.0.0.2: icmp_req=4 ttl=64 time=0.035 ms
+
+
+5. The flow table has 12 entries now, 10 of which are new.
+It appears that the 3 hosts are fully connected to each other with action set to FLOOD.
+It also looks like a route to the controller has been added with the maximum priority.
+
+NXST_FLOW reply (xid=0x4):
+ cookie=0x0, duration=28.542s, table=0, n_packets=3, n_bytes=238, in_port=1 actions=output:2
+ cookie=0x0, duration=23.586s, table=0, n_packets=3, n_bytes=238, in_port=2 actions=output:1
+ cookie=0x0, duration=42.412s, table=0, n_packets=0, n_bytes=0, idle_timeout=60,hard_timeout=60,in_port=3,dl_src=00:00:00:00:00:03,dl_dst=33:33:ff:00:00:03 actions=FLOOD
+ cookie=0x0, duration=41.72s, table=0, n_packets=2, n_bytes=140, idle_timeout=60,hard_timeout=60,in_port=2,dl_src=00:00:00:00:00:02,dl_dst=33:33:00:00:00:02 actions=FLOOD
+ cookie=0x0, duration=41.339s, table=0, n_packets=2, n_bytes=140, idle_timeout=60,hard_timeout=60,in_port=1,dl_src=00:00:00:00:00:01,dl_dst=33:33:00:00:00:02 actions=FLOOD
+ cookie=0x0, duration=35.472s, table=0, n_packets=0, n_bytes=0, idle_timeout=60,hard_timeout=60,in_port=1,dl_src=00:00:00:00:00:01,dl_dst=33:33:00:00:00:16 actions=FLOOD
+ cookie=0x0, duration=33.263s, table=0, n_packets=0, n_bytes=0, idle_timeout=60,hard_timeout=60,in_port=3,dl_src=00:00:00:00:00:03,dl_dst=33:33:00:00:00:16 actions=FLOOD
+ cookie=0x0, duration=41.412s, table=0, n_packets=2, n_bytes=140, idle_timeout=60,hard_timeout=60,in_port=3,dl_src=00:00:00:00:00:03,dl_dst=33:33:00:00:00:02 actions=FLOOD
+ cookie=0x0, duration=40.412s, table=0, n_packets=0, n_bytes=0, idle_timeout=60,hard_timeout=60,in_port=2,dl_src=00:00:00:00:00:02,dl_dst=33:33:00:00:00:16 actions=FLOOD
+ cookie=0x0, duration=42.72s, table=0, n_packets=0, n_bytes=0, idle_timeout=60,hard_timeout=60,in_port=2,dl_src=00:00:00:00:00:02,dl_dst=33:33:ff:00:00:02 actions=FLOOD
+ cookie=0x0, duration=42.339s, table=0, n_packets=0, n_bytes=0, idle_timeout=60,hard_timeout=60,in_port=1,dl_src=00:00:00:00:00:01,dl_dst=33:33:ff:00:00:01 actions=FLOOD
+ cookie=0x0, duration=43.076s, table=0, n_packets=0, n_bytes=0, priority=65535,dl_dst=01:80:c2:00:00:0e,dl_type=0x88cc actions=CONTROLLER:51
+
+
+6. After pinging, 9 entries were removed and what is left is the 2 manually created connections
+as well as the controller entry.
+
+NXST_FLOW reply (xid=0x4):
+ cookie=0x0, duration=224.813s, table=0, n_packets=10, n_bytes=812, in_port=1 actions=output:2
+ cookie=0x0, duration=219.857s, table=0, n_packets=10, n_bytes=812, in_port=2 actions=output:1
+ cookie=0x0, duration=239.347s, table=0, n_packets=0, n_bytes=0, priority=65535,dl_dst=01:80:c2:00:00:0e,dl_type=0x88cc actions=CONTROLLER:51
